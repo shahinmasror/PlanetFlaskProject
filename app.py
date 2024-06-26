@@ -1,13 +1,36 @@
 from flask import Flask,jsonify,request
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import create_engine, Column, Integer, String, Float,ForeignKey
-import  os
+import os
 from  flask_marshmallow import Marshmallow
+from flask_jwt_extended import JWTManager,jwt_required,create_access_token
+from flask_mail import Mail,Message
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
+
+
 app = Flask(__name__)
 basedir = os.path.abspath(os.path.dirname(__file__))
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///plantetary.db'
+app.config['JWT_SECRET_KEY']='super_secret'
+"""
+app.config['MAIL_SERVER'] = 'sandbox.smtp.mailtrap.io'
+app.config['MAIL_USERNAME'] = os.environ['MAIL_USERNAME']
+app.config['MAIL_PASSWORD'] = os.environ['MAIL_PASSWORD']
+"""
+app.config['MAIL_SERVER']='sandbox.smtp.mailtrap.io'
+app.config['MAIL_PORT'] = 2525
+app.config['MAIL_USERNAME'] = '1d7732b954cb8a'
+app.config['MAIL_PASSWORD'] = '595805e5a8b8db'
+app.config['MAIL_USE_TLS'] = True
+app.config['MAIL_USE_SSL'] = False
+
 db=SQLAlchemy(app)
 ma= Marshmallow(app)
+jwt=JWTManager(app)
+mail = Mail(app)
 @app.cli.command('db_create')
 def db_create():
     db.create_all()
@@ -131,7 +154,48 @@ users_schema = UserSchema(many=True)
 planet_schema = PlanetSchema()
 planets_schema = PlanetSchema(many=True)
 
+@app.route('/login',methods=['POST'])
+def login():
+    if request.is_json:
+        email=request.json['email']
+        password=request.json['password']
+    else:
+        email=request.form['email']
+        password=request.form['password']
 
+    test=User.query.filter_by(email=email,password=password).first()
+    if test:
+           access_token = create_access_token(identity=email)
+           return jsonify(Message='Loging Success' ,access_token=access_token)
+    else:
+        return jsonify(Message='Email or Password is incorrect'),401
+""""
+
+@app.route('/send_email')
+def send_email():
+  msg = Message(
+    'Hello',
+    recipients=['shahinmasror.tb@gmail.com'],
+    body='This is a test email sent from Flask-Mail!'
+  )
+  mail.send(msg)
+  return 'Email sent succesfully!'
+  """
+
+@app.route('/retrieve_password/<string:email>', methods=['GET'])
+def retrieve_password(email: str):
+    user = User.query.filter_by(email=email).first()
+    if user:
+        msg = Message(
+            "Your planetary password",
+            body=f"Your planetary password is: {user.password}",
+            sender="admin@planetary-api.com",
+            recipients=[email]
+        )
+        mail.send(msg)
+        return jsonify(message="Password sent to " + email)
+    else:
+        return jsonify(message="Email not found"), 404
 
 
 
