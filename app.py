@@ -198,6 +198,78 @@ def retrieve_password(email: str):
         return jsonify(message="Email not found"), 404
 
 
+@app.route('/get_planetbyid/<int:planet_id>', methods=['GET'])
+def get_planetbyid(planet_id: int):
+    data = Planet.query.filter_by(planet_id=planet_id).first()
+    if data:
+        planet_schema = PlanetSchema()
+        result = planet_schema.dump(data)
+        return jsonify(result), 200
+    else:
+        return jsonify(message="Planet not found"), 404
+
+@app.route('/add_palnet', methods=['POST'])
+@jwt_required()
+def add_palnet():
+    planet_name = request.json['planet_name']
+    result = Planet.query.filter_by(planet_name=planet_name).first()
+    if result:
+        return jsonify(message="Plants already exists"), 401
+    else:
+        planet_type = request.json['planet_type']
+        home_star = request.json['home_star']
+        mass = request.json['mass']
+        radius = request.json['radius']
+
+        distance = request.json['distance']
+        new_planet=Planet(
+            planet_name=planet_name,
+            planet_type=planet_type,
+            home_star=home_star,
+            mass=mass,
+            radius=radius,
+            distance=distance
+        )
+        db.session.add(new_planet)
+        db.session.commit()
+        return jsonify(message="Plants added successfully")
+
+
+@app.route('/update_planet', methods=['PUT'])
+@jwt_required()
+def update_planet():
+    planet_id = int(request.form['planet_id'])
+    planet=Planet.query.filter_by(planet_id=planet_id).first()
+    if planet:
+        Planet.planet_name = request.form['planet_name']
+        Planet.planet_type = request.form['planet_type']
+        Planet.home_star = request.form['home_star']
+        Planet.mass= float(request.form['mass'])
+        Planet.radius= float(request.form['radius'])
+        Planet.distance = float(request.form['distance'])
+
+        db.session.commit()
+
+
+        return jsonify(message="Plants updated successfully"),200
+    else:
+        return jsonify(message="Plants not found"), 404
+
+@app.route('/delete_planet/<int:planet_id>', methods=['DELETE'])
+def delete_planet(planet_id:int):
+
+    planet=Planet.query.filter_by(planet_id=planet_id).first()
+
+    if planet:
+        db.session.delete(planet)
+        db.session.commit()
+
+        return jsonify(message="Plants deleted successfully")
+
+
+
+
+
 
 
 
